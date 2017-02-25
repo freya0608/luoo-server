@@ -1,4 +1,9 @@
 .idea
+.cache
+
+*.log
+.python-version
+*.pickle
+
 venv
 __pycache__
-.cache

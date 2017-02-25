@@ -1,1 +1,5 @@
-sanic
+splinter
+requests
+sqlalchemy
+Flask
+Flask-SQLAlchemy
