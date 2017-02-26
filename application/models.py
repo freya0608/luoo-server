@@ -1,47 +1,35 @@
-from sqlalchemy import Column
-from sqlalchemy import ForeignKey
-from sqlalchemy import Integer
-from sqlalchemy import String
-from sqlalchemy import Table
 from sqlalchemy.orm import relationship
 
-import config
-from database import Base, Session
-
-album_pattern = re.compile("^http://www.luoo.net/music/(\d+)\?sid=(\d+)$")
-session = Session()
+from application import config
+from . import db
 
 
-song_creator = Table('song_creator', Base.metadata,
-    Column('song_id', Integer, ForeignKey('songs.id')),
-    Column('artist_id', Integer, ForeignKey('artists.id'))
+song_creator = db.Table('song_creator', db.metadata,
+    db.Column('song_id', db.Integer, db.ForeignKey('song.id')),
+    db.Column('artist_id', db.Integer, db.ForeignKey('artist.id'))
 )
 
-volume_song = Table('volume_song', Base.metadata,
-    Column('song_id', Integer, ForeignKey('songs.id')),
-    Column('volume_id', Integer, ForeignKey('volumes.id'))
+volume_song = db.Table('volume_song', db.metadata,
+    db.Column('song_id', db.Integer, db.ForeignKey('song.id')),
+    db.Column('volume_id', db.Integer, db.ForeignKey('volume.id'))
 )
 
-album_song = Table('album_song', Base.metadata,
-    Column('song_id', Integer, ForeignKey('songs.id')),
-    Column('album_id', Integer, ForeignKey('albums.id'))
+album_song = db.Table('album_song', db.metadata,
+    db.Column('song_id', db.Integer, db.ForeignKey('song.id')),
+    db.Column('album_id', db.Integer, db.ForeignKey('album.id'))
 )
 
 
-class Artist(Base):
-    __tablename__ = "artists"
+class Artist(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(length=400))
 
-    id = Column(Integer, primary_key=True)
-    name = Column(String(length=400))
-
-    songs = relationship('Song', secondary=song_creator, back_populates="artists")
+    songs = db.relationship('Song', secondary=song_creator, back_populates="artists")
 
 
-class Album(Base):
-    __tablename__ = "albums"
-
-    id = Column(Integer, primary_key=True, autoincrement=False)
-    name = Column(String(length=400))
+class Album(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=False)
+    name = db.Column(db.String(length=400))
 
     songs = relationship("Song", secondary=album_song)
 
@@ -56,20 +44,21 @@ class Album(Base):
         return "{}{}".format(config.LUOO_IMG_CDN_PREFIX, valuable_url)
 
 
-class Volume(Base):
-    __tablename__ = "volumes"
-
-    id = Column(Integer, primary_key=True, autoincrement=False)
-    title = Column(String(length=400))
+class Volume(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=False)
+    title = db.Column(db.String(length=400))
 
     songs = relationship('Song', secondary=volume_song)
 
 
-class Song(Base):
-    __tablename__ = "songs"
-
-    id = Column(Integer, primary_key=True, autoincrement=False)
-    title = Column(String(length=400))
-    valuable_url = Column(String(length=500))
+class Song(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=False)
+    title = db.Column(db.String(length=400))
+    valuable_url = db.Column(db.String(length=500))
 
     artists = relationship('Artist', secondary=song_creator, back_populates="songs")
+
+    @property
+    def url(self):
+        return "{}{}".format(config.LUOO_SONG_CDN_PREFIX, self.valuable_url)
+

@@ -1,13 +1,12 @@
+import logging
 import pickle
 import re
 
-import logging
+from flask_sqlalchemy import SQLAlchemy
 from splinter import Browser
 from splinter.exceptions import ElementDoesNotExist
-from sqlalchemy.orm import sessionmaker
 
-from application import config
-from application import database
+from application import config, create_app
 from application.models import Song, Album, Artist, Volume
 
 logger = logging.getLogger("update_songs_job")
@@ -31,9 +30,6 @@ album_pattern = re.compile("albums/(\d+)/")
 
 user_agent = """Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3)
 AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36"""
-
-
-Session = sessionmaker(bind=database.engine)
 
 
 def format_volume_url(volume_id):
@@ -75,7 +71,7 @@ def parse_valuable_url(song_url):
 def save_song(song_dict):
     valuable_url = parse_valuable_url(song_dict["mp3"])
     song_id = song_dict["id"]
-    saved_song = session.query(Song).get(song_id)
+    saved_song = db.session.query(Song).get(song_id)
     if saved_song is None:
         saved_song = Song(id=song_id, title=song_dict["title"], valuable_url=valuable_url)
     return saved_song
@@ -88,7 +84,7 @@ def parse_album_id(poster_url):
 
 def create_album(song_dict):
     album_id = parse_album_id(song_dict["poster"])
-    saved_album = session.query(Album).get(album_id)
+    saved_album = db.session.query(Album).get(album_id)
     if saved_album is None:
         saved_album = Album(id=album_id, name=song_dict["album"])
     return saved_album
@@ -106,18 +102,24 @@ def update_lowest_volume(volume_id):
 
 def run():
     lowest_volume = load_lowest_volume()
-    latest_volume = get_latest_volume() + 1
+    latest_volume = get_latest_volume()
+    is_latest_volume_saved = latest_volume < lowest_volume
+    if is_latest_volume_saved:
+        logger.info('Latest volume {} had been saved'.format(latest_volume))
+        return
 
     with Browser('phantomjs', user_agent=user_agent) as browser:
-        for volume_id in range(lowest_volume, latest_volume):
+        for volume_id in range(lowest_volume, latest_volume + 1):
             volume_url = format_volume_url(volume_id)
-            logger.info('Parsing songs of volume: {}'.format(volume_url))
+            logger.info('Parsing songs of volume: {}'.format(volume_id))
             browser.visit(volume_url)
 
             try:
                 img_404_not_present = browser.is_element_not_present_by_css(
                     "img[src='http://s.luoo.net/img/icon_404.png']")
                 if not img_404_not_present:
+                    lowest_volume += 1
+                    update_lowest_volume(lowest_volume)
                     continue
                 title = browser.find_by_css(".vol-name .vol-title").first.text
             except ElementDoesNotExist:
@@ -125,31 +127,31 @@ def run():
                 browser.driver.save_screenshot("exception.png")
                 raise
 
-            try:
-                global session
-                session = Session()
-                volume = Volume(id=volume_id, title=title)
-                song_list = browser.evaluate_script('window.luooPlayer.playlist')
-                for s in song_list:
-                    song = save_song(s)
-                    artists = create_artists(s)
-                    song.artists.extend(artists)
+            with app.app_context():
+                try:
+                    volume = Volume(id=volume_id, title=title)
+                    song_list = browser.evaluate_script('window.luooPlayer.playlist')
+                    for s in song_list:
+                        song = save_song(s)
+                        artists = create_artists(s)
+                        song.artists.extend(artists)
 
-                    album = create_album(s)
-                    album.songs.append(song)
-                    volume.songs.append(song)
-                    session.add(volume)
-                    session.add(album)
-                session.commit()
-                lowest_volume += 1
-                update_lowest_volume(lowest_volume)
-            except:
-                session.rollback()
-                raise
-            finally:
-                session.close()
+                        album = create_album(s)
+                        album.songs.append(song)
+                        volume.songs.append(song)
+                        db.session.add(volume)
+                        db.session.add(album)
+                    db.session.commit()
+                    lowest_volume += 1
+                    update_lowest_volume(lowest_volume)
+                except:
+                    db.session.rollback()
+                    raise
 
 
 if __name__ == '__main__':
-    session = None
+    app = create_app()
+    app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://root:""@localhost/luoo?charset=utf8"
+    db = SQLAlchemy()
+    db.init_app(app)
     run()

@@ -1,5 +1,6 @@
 splinter
-requests
 sqlalchemy
 Flask
+PyMySQL
 Flask-SQLAlchemy
+flask-restful
