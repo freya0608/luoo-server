@@ -36,12 +36,12 @@ class Album(db.Model):
     @property
     def poster(self):
         valuable_url = "pics/albums/{}/cover.jpg?imageView2/1/w/580/h/580".format(self.id)
-        return "{}{}".format(current_app.config.LUOO_IMG_CDN_PREFIX, valuable_url)
+        return "{}{}".format(current_app.config['LUOO_IMG_CDN_PREFIX'], valuable_url)
 
     @property
     def poster_small(self):
         valuable_url = "pics/albums/{}/cover.jpg?imageView2/1/w/60/h/60".format(self.id)
-        return "{}{}".format(current_app.config.LUOO_IMG_CDN_PREFIX, valuable_url)
+        return "{}{}".format(current_app.config['LUOO_IMG_CDN_PREFIX'], valuable_url)
 
 
 class Volume(db.Model):
@@ -60,5 +60,6 @@ class Song(db.Model):
 
     @property
     def url(self):
-        return "{}{}".format(current_app.config.LUOO_SONG_CDN_PREFIX, self.valuable_url)
+        url = "{}{}".format(current_app.config['LUOO_SONG_CDN_PREFIX'], self.valuable_url)
+        return url
 
