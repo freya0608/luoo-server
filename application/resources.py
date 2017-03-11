@@ -1,7 +1,7 @@
 from flask_restful import Resource, marshal_with
 from flask_restful import fields
 
-from application.models import Song
+from .models import Song
 
 song_fields = {
     'id': fields.Integer,

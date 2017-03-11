@@ -1,4 +1,7 @@
+DEBUG = False
+
 SQLALCHEMY_TRACK_MODIFICATIONS = False
+
 
 LUOO_SINGLE_URL_PREFIX = "http://www.luoo.net/single"
 LUOO_SONG_CDN_PREFIX = "http://mp3-cdn.luoo.net/low/"

@@ -6,8 +6,10 @@ from flask_sqlalchemy import SQLAlchemy
 from splinter import Browser
 from splinter.exceptions import ElementDoesNotExist
 
-from application import config, create_app, format_database_uri
+from application import create_app, format_database_uri
 from application.models import Song, Album, Artist, Volume
+
+import config.default as config
 
 logger = logging.getLogger("update_songs_job")
 logger.setLevel(logging.DEBUG)

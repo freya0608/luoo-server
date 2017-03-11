@@ -4,6 +4,8 @@
 *.log
 .python-version
 *.pickle
+*.egg-info
 
 venv
+instance
 __pycache__
